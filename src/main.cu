@@ -209,13 +209,37 @@ int main(int, char**)
         /* Setup controls */
         ImGui::SetWindowPos(UI_CONTROLS_NAME, UI_CONTROLS_POS);
         ImGui::SetWindowSize(UI_CONTROLS_NAME, UI_CONTROLS_SIZE);
-        ImGui::Begin(UI_CONTROLS_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+        ImGui::Begin(UI_CONTROLS_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Open"))
+            {
+                if (ImGui::MenuItem("Genus 2")) {}
+                if (ImGui::MenuItem("Wineglass")) {}
+                if (ImGui::MenuItem("Porous Surface")) {}
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Help"))
+            {
+                if (ImGui::MenuItem("About")) {}
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
         if (ImGui::CollapsingHeader("Camera"))
         {
             ImGui::Text("Change view-point in spherical coordinates.");
             ImGui::SliderFloat("Distance", &render_settings->camera_pos_r, CAMERA_RADIUS_RANGE[0], CAMERA_RADIUS_RANGE[1]);
             ImGui::SliderFloat("Azimuth angle (rad)", &render_settings->camera_pos_azimuth, CAMERA_AZIMUTH_RANGE[0], CAMERA_AZIMUTH_RANGE[1]);
             ImGui::SliderFloat("Polar angle (rad)", &render_settings->camera_pos_polar, CAMERA_POLAR_RANGE[0], CAMERA_POLAR_RANGE[1]);
+        }
+        if (ImGui::CollapsingHeader("Light"))
+        {
+            ImGui::Text("Change light properties.");
+            ImGui::SliderFloat("Light power", &render_settings->light_power, LIGHT_POWER_RANGE[0], LIGHT_POWER_RANGE[1]);
+            ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
         }
         ImGui::End();
 

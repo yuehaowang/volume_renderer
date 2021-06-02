@@ -38,7 +38,7 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(VolumeSampleData v
             Eigen::Vector3f surface_color = tinycolormap::GetColor((normal.x() + 1.0) / 2.0, tinycolormap::ColormapType::Turbo).ConvertToEigen().cast<float>();
 
             /* Ambient */
-            Eigen::Vector3f C_a = li->getColor() * AMBIENT_MAGNITUDE;
+            Eigen::Vector3f C_a = li->getRadiance() * AMBIENT_MAGNITUDE;
 
             /* Compute light direction, light path distance, etc. */
             Eigen::Vector3f pos_diff = li->getPosition() - v_data.position;
@@ -47,12 +47,12 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(VolumeSampleData v
 
             /* Diffusion */
             float diff = max(normal.dot(li_dir), 0.0f);
-            Eigen::Vector3f C_d = diff * li->getColor();
+            Eigen::Vector3f C_d = diff * li->getRadiance();
 
             /* Specular */
             Eigen::Vector3f halfway_dir = (view_dir + li_dir).normalized();
             float spec = pow(max(normal.dot(halfway_dir), 0.0f), SPECULAR_SHININESS);
-            Eigen::Vector3f C_s = spec * li->getColor();
+            Eigen::Vector3f C_s = spec * li->getRadiance();
 
             /* Add the emission contribution */
             q += (C_a + C_d + C_s).cwiseProduct(surface_color);

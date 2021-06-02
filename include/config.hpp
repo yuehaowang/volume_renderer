@@ -45,11 +45,16 @@
 #define CAMERA_POLAR_RANGE Eigen::Vector2f(0, PI)
 #define CAMERA_RADIUS_RANGE Eigen::Vector2f(0.1f, 20.0f)
 
+#define LIGHT_POWER_RANGE Eigen::Vector2f(1.0f, 5000.0f)
+
 struct RenderingConfig
 {
     float camera_pos_azimuth;
     float camera_pos_polar;
     float camera_pos_r;
+
+    Eigen::Vector3f light_rgb;
+    float light_power;
 };
 
 __global__ void init_rendering_config(RenderingConfig* render_settings);

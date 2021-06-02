@@ -56,7 +56,7 @@ __global__ static void create_lights(Light** lis, int lis_num, ImplicitGeometry*
 
     AABB vol_bbox = (*geom)->getBBox();
 
-    /* Centeric light */
+    /* Centric light */
     lis[0] = new Light(vol_bbox.getCenter(), Eigen::Vector3f(1.0, 1.0, 1.0));
     
     /* Surrounding lights */
@@ -67,8 +67,18 @@ __global__ static void create_lights(Light** lis, int lis_num, ImplicitGeometry*
         float theta = i * (2 * PI / sur_lis_num);
         float phi = PI / 4;
 
-        Eigen::Vector3f p(r * cos(phi) * cos(theta), r * cos(phi) * sin(theta), r * sin(phi));
-        lis[i + 1] = new Light(p, LIGHT_POWER);
+        Eigen::Vector3f p(r * cos(phi) * cos(theta), r * sin(phi), r * cos(phi) * sin(theta));
+        lis[i + 1] = new Light(p, Eigen::Vector3f(0, 0, 0));
+    }
+}
+
+__global__ static void update_lights(Light** lis, int lis_num, Eigen::Vector3f rgb, float power)
+{
+    SINGLE_THREAD;
+
+    for (int i = 0; i < lis_num; ++i)
+    {
+        lis[i]->setRadiance(rgb * power);
     }
 }
 
@@ -114,5 +124,6 @@ MainScene::MainScene()
 void MainScene::updateConfiguration(RenderingConfig* c)
 {
     update_main_camera<<<1, 1>>>(main_camera, c->camera_pos_azimuth, c->camera_pos_polar, c->camera_pos_r, geometry);
+    update_lights<<<1, 1>>>(lights, LIGHT_NUM, c->light_rgb, c->light_power);
     checkCudaErrors(cudaDeviceSynchronize());
 }
