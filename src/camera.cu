@@ -52,3 +52,8 @@ __host__ __device__ Eigen::Vector3f Camera::getPosition() const
 {
     return position;
 }
+
+__host__ __device__ void Camera::moveTo(Eigen::Vector3f des)
+{
+    position = des;
+}

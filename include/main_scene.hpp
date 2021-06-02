@@ -3,6 +3,7 @@
 #include "implicit_geom.hpp"
 #include "light.hpp"
 #include "classifier.hpp"
+#include "config.hpp"
 
 
 struct MainScene
@@ -13,4 +14,5 @@ struct MainScene
     Classifier** classifier;
 
     MainScene();
+    void updateConfiguration(RenderingConfig* c);
 };

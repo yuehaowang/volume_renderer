@@ -26,4 +26,5 @@ public:
     __host__ __device__ Ray generateRay(float dx, float dy) const;
     __host__ __device__ const Film& getFilm() const;
     __host__ __device__ Eigen::Vector3f getPosition() const;
+    __host__ __device__ void moveTo(Eigen::Vector3f des);
 };

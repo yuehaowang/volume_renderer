@@ -19,7 +19,7 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(VolumeSampleData v
 {
     OpticsData optics;
 
-    float val = MathUtils::Gaussian(isovalue, 10 * dt, v_data.value);
+    float val = MathUtils::Gaussian(isovalue, 0.01, v_data.value);
 
     /* Emission */
     Eigen::Vector3f q(0, 0, 0);
@@ -60,7 +60,7 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(VolumeSampleData v
     }
 
     optics.transparency = Eigen::Vector3f::Ones() * exp(-4000 * val * dt);
-    optics.color = q * val;
+    optics.color = q * val * dt;
 
     return optics;
 }

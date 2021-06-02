@@ -44,13 +44,8 @@ struct RenderingOutput
     }
 };
 
+
 ResourceManager resource_manager;
-
-
-static void glfwErrorCallback(int error, const char* description)
-{
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
-}
 
 
 void render(VolumeRenderer& renderer, RenderingOutput* out)
@@ -62,15 +57,15 @@ void render(VolumeRenderer& renderer, RenderingOutput* out)
     Eigen::Vector3f* pixel_array;
     checkCudaErrors(cudaMallocManaged((void **)&pixel_array, res_x * res_y * sizeof(Eigen::Vector3f)));
 
-    std::cout << "\n\nRendering..." << std::endl;
+    // std::cout << "\n\nRendering..." << std::endl;
 
-	clock_t start_time = std::chrono::system_clock::now();
+	// clock_t start_time = std::chrono::system_clock::now();
     
     renderer.renderFrontToBack(pixel_array, res_x, res_y, SAMPLE_STEP_LENGTH);
 
-    clock_t end_time = std::chrono::system_clock::now();
-	double time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-	std::cout << "\nTime elapsed: " << time_elapsed << " ms" << std::endl;
+    // clock_t end_time = std::chrono::system_clock::now();
+	// double time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+	// std::cout << "\nTime elapsed: " << time_elapsed << " ms" << std::endl;
 
     /* Store the rendering result in bytes */
     int num_bytes = res_x * res_y * 4 * sizeof(unsigned char);
@@ -81,7 +76,6 @@ void render(VolumeRenderer& renderer, RenderingOutput* out)
     dim3 blocks(res_x / tx + 1, res_y / ty + 1);
     dim3 threads(tx, ty);
     pixelArrayToBytes<<<blocks, threads>>>(pixel_array, img_data, res_x, res_y);
-    checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     //stbi_write_png(OUTPUT_FILE, res_x, res_y, 4, img_data, 0);
@@ -93,6 +87,64 @@ void render(VolumeRenderer& renderer, RenderingOutput* out)
 	checkCudaErrors(cudaMemcpyToArray(texture_ptr, 0, 0, img_data, num_bytes, cudaMemcpyDeviceToDevice));
     checkCudaErrors(cudaDeviceSynchronize());
 	checkCudaErrors(cudaGraphicsUnmapResources(1, &(out->cuda_tex_resource), 0));
+
+    cudaFree(pixel_array);
+    cudaFree(img_data);
+}
+
+
+static void glfwErrorCallback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+
+GLFWwindow* init_window()
+{
+    /* Initialize GLFW */
+    glfwSetErrorCallback(glfwErrorCallback);
+    if (!glfwInit())
+    {
+        return nullptr;
+    }
+    
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    /* Create window with graphics context */
+    GLFWwindow* window = glfwCreateWindow(UI_WINDOW_SIZE_W, UI_WINDOW_SIZE_H, UI_WINDOW_TITLE, NULL, NULL);
+    if (window == nullptr)
+    {
+        return nullptr;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+
+    return window;
+}
+
+
+void init_imgui(GLFWwindow* window)
+{
+    /* Setup Dear ImGui context */
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    /* Setup Dear ImGui style */
+    ImGui::StyleColorsClassic();
+
+    /* Setup Platform/Renderer backends */
+    const char* glsl_version = "#version 100";
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    /* Load Fonts */
+    io.Fonts->AddFontFromFileTTF((resource_manager.getResource("fonts/Roboto-Medium.ttf")).c_str(), 16.0f);
+    io.Fonts->AddFontDefault();
 }
 
 
@@ -108,89 +160,63 @@ int main(int, char**)
     renderer.setLights(scene.lights, LIGHT_NUM);
     renderer.setClassifier(scene.classifier);
 
-    /* Setup window */
-    glfwSetErrorCallback(glfwErrorCallback);
-    if (!glfwInit())
+    /* Initialize window */
+    GLFWwindow* window = init_window();
+    if (!window)
     {
         return 1;
     }
-    const char* glsl_version = "#version 100";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-
-    /* Create window with graphics context */
-    GLFWwindow* window = glfwCreateWindow(RESOLUTION_X + 400, RESOLUTION_Y + 50, "Volrend", NULL, NULL);
-    if (window == NULL)
-    {
-        return 1;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
-
     /* Initialize OpenGL loader */
     if (!gladLoadGL())
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         return 1;
     }
+    /* Initialize ImGui */
+    init_imgui(window);
 
-    /* Setup Dear ImGui context */
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    /* Setup Dear ImGui style */
-    ImGui::StyleColorsClassic();
-
-    /* Setup Platform/Renderer backends */
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-
-    /* Load Fonts */
-    io.Fonts->AddFontFromFileTTF((resource_manager.getResource("fonts/Roboto-Medium.ttf")).c_str(), 16.0f);
-    io.Fonts->AddFontDefault();
-
-    // /* The texture resource storing rendering result */
-    // struct cudaGraphicsResource* cuda_render_tex_resource;
-    // /* GL texture buffer ID */
-    // GLuint gl_render_tex_ID;
-    // /* Create an OpenGL texture */
-	// glGenTextures(1, &gl_render_tex_ID);
-	// glBindTexture(GL_TEXTURE_2D, gl_render_tex_ID);
-    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RESOLUTION_X, RESOLUTION_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    // glGenerateMipmap(GL_TEXTURE_2D);
-	// /* Set texturing parameters */
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// /* Register the texture with CUDA */
-	// checkCudaErrors(cudaGraphicsGLRegisterImage(&cuda_render_tex_resource, gl_render_tex_ID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
-    
+    /* Rendering output */    
     RenderingOutput render_output(RESOLUTION_X, RESOLUTION_Y);
 
-    /* Render the scene */
-    render(renderer, &render_output);
+    /* Rendering settings */
+    RenderingConfig* render_settings;
+    checkCudaErrors(cudaMallocManaged((void**)&render_settings, sizeof(RenderingConfig)));
+    init_rendering_config<<<1, 1>>>(render_settings);
+    checkCudaErrors(cudaDeviceSynchronize());
 
     /* Main loop */
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
 
+        scene.updateConfiguration(render_settings);
+
+        /* Render the scene */
+        render(renderer, &render_output);
+
         /* Start the Dear ImGui frame */
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-
-        ImGui::SetWindowPos("Rendering Result", ImVec2(0, 0));
-        ImGui::SetWindowSize("Rendering Result", ImVec2(0, 0));
-        ImGui::Begin("Rendering Result", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+        /* Setup visualization widget */
+        ImGui::SetWindowPos(UI_VISUALIZATION_NAME, UI_VISUALIZATION_POS);
+        ImGui::SetWindowSize(UI_VISUALIZATION_NAME, UI_VISUALIZATION_SIZE);
+        ImGui::Begin(UI_VISUALIZATION_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
         ImGui::Image((void*)(intptr_t)render_output.gl_tex_ID, ImVec2(RESOLUTION_X, RESOLUTION_Y));
+        ImGui::End();
+
+        /* Setup controls */
+        ImGui::SetWindowPos(UI_CONTROLS_NAME, UI_CONTROLS_POS);
+        ImGui::SetWindowSize(UI_CONTROLS_NAME, UI_CONTROLS_SIZE);
+        ImGui::Begin(UI_CONTROLS_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+        if (ImGui::CollapsingHeader("Camera"))
+        {
+            ImGui::Text("Change view-point in spherical coordinates.");
+            ImGui::SliderFloat("Distance", &render_settings->camera_pos_r, CAMERA_RADIUS_RANGE[0], CAMERA_RADIUS_RANGE[1]);
+            ImGui::SliderFloat("Azimuth angle (rad)", &render_settings->camera_pos_azimuth, CAMERA_AZIMUTH_RANGE[0], CAMERA_AZIMUTH_RANGE[1]);
+            ImGui::SliderFloat("Polar angle (rad)", &render_settings->camera_pos_polar, CAMERA_POLAR_RANGE[0], CAMERA_POLAR_RANGE[1]);
+        }
         ImGui::End();
 
         /* Render UI */

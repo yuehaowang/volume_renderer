@@ -116,6 +116,5 @@ void VolumeRenderer::renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, 
     dim3 blocks(res_x / tx + 1, res_y / ty + 1);
     dim3 threads(tx, ty);
     rayIntegral<<<blocks, threads>>>(pixel_array, geometry, main_camera, lights, count_lights, classifier, dt);
-    checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 }
