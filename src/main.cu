@@ -15,9 +15,11 @@
 #include "main_scene.hpp"
 #include "volume_renderer.hpp"
 #include "res_manager.hpp"
+#include "gui.hpp"
 
 
 #define clock_t std::chrono::time_point<std::chrono::system_clock>
+
 
 /**
  * A data structure for storing rendering output as texture
@@ -48,7 +50,7 @@ struct RenderingOutput
 ResourceManager resource_manager;
 
 
-void render(VolumeRenderer& renderer, RenderingOutput* out)
+void vol_render(VolumeRenderer& renderer, RenderingOutput* out)
 {
     int res_x = RESOLUTION_X;
     int res_y = RESOLUTION_Y;
@@ -184,6 +186,9 @@ int main(int, char**)
     init_rendering_config<<<1, 1>>>(render_settings);
     checkCudaErrors(cudaDeviceSynchronize());
 
+    /* Initialize GUI */
+    GUI window_ui(render_output.gl_tex_ID, render_settings);
+
     /* Main loop */
     while (!glfwWindowShouldClose(window))
     {
@@ -192,59 +197,11 @@ int main(int, char**)
         scene.updateConfiguration(render_settings);
 
         /* Render the scene */
-        render(renderer, &render_output);
-
-        /* Start the Dear ImGui frame */
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        /* Setup visualization widget */
-        ImGui::SetWindowPos(UI_VISUALIZATION_NAME, UI_VISUALIZATION_POS);
-        ImGui::SetWindowSize(UI_VISUALIZATION_NAME, UI_VISUALIZATION_SIZE);
-        ImGui::Begin(UI_VISUALIZATION_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-        ImGui::Image((void*)(intptr_t)render_output.gl_tex_ID, ImVec2(RESOLUTION_X, RESOLUTION_Y));
-        ImGui::End();
-
-        /* Setup controls */
-        ImGui::SetWindowPos(UI_CONTROLS_NAME, UI_CONTROLS_POS);
-        ImGui::SetWindowSize(UI_CONTROLS_NAME, UI_CONTROLS_SIZE);
-        ImGui::Begin(UI_CONTROLS_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
-        if (ImGui::BeginMenuBar())
-        {
-            if (ImGui::BeginMenu("Open"))
-            {
-                if (ImGui::MenuItem("Genus 2")) {}
-                if (ImGui::MenuItem("Wineglass")) {}
-                if (ImGui::MenuItem("Porous Surface")) {}
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::BeginMenu("Help"))
-            {
-                if (ImGui::MenuItem("About")) {}
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMenuBar();
-        }
-        if (ImGui::CollapsingHeader("Camera"))
-        {
-            ImGui::Text("Change view-point in spherical coordinates.");
-            ImGui::SliderFloat("Distance", &render_settings->camera_pos_r, CAMERA_RADIUS_RANGE[0], CAMERA_RADIUS_RANGE[1]);
-            ImGui::SliderFloat("Azimuth angle (rad)", &render_settings->camera_pos_azimuth, CAMERA_AZIMUTH_RANGE[0], CAMERA_AZIMUTH_RANGE[1]);
-            ImGui::SliderFloat("Polar angle (rad)", &render_settings->camera_pos_polar, CAMERA_POLAR_RANGE[0], CAMERA_POLAR_RANGE[1]);
-        }
-        if (ImGui::CollapsingHeader("Light"))
-        {
-            ImGui::Text("Change light properties.");
-            ImGui::SliderFloat("Light power", &render_settings->light_power, LIGHT_POWER_RANGE[0], LIGHT_POWER_RANGE[1]);
-            ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
-        }
-        ImGui::End();
+        vol_render(renderer, &render_output);
 
         /* Render UI */
-        ImGui::Render();
+        window_ui.draw();
+
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
