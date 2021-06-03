@@ -118,6 +118,7 @@ MainScene::MainScene()
     geometry = d_geom;
     classifier = d_cls;
     lights = d_lis;
+    count_lights = LIGHT_NUM;
 }
 
 

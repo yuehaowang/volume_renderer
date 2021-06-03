@@ -50,10 +50,19 @@ struct RenderingOutput
 ResourceManager resource_manager;
 
 
-void vol_render(VolumeRenderer& renderer, RenderingOutput* out, RenderingConfig* render_settings)
+void vol_render(VolumeRenderer& renderer, MainScene& scene, RenderingOutput* out, RenderingConfig* render_settings)
 {
     int res_x = RESOLUTION_X;
     int res_y = RESOLUTION_Y;
+
+    /* Update the scene according to the given rendering settings */
+    scene.updateConfiguration(render_settings);
+
+    /* Send the scene to the renderer */
+    renderer.setVolume(scene.geometry);
+    renderer.setCamera(scene.main_camera);
+    renderer.setLights(scene.lights, scene.count_lights);
+    renderer.setClassifier(scene.classifier);
 
     /* Render to a pixel array */
     Eigen::Vector3f* pixel_array;
@@ -157,10 +166,6 @@ int main(int, char**)
 
     /* Setup volume renderer */
     VolumeRenderer renderer;
-    renderer.setVolume(scene.geometry);
-    renderer.setCamera(scene.main_camera);
-    renderer.setLights(scene.lights, LIGHT_NUM);
-    renderer.setClassifier(scene.classifier);
 
     /* Initialize window */
     GLFWwindow* window = init_window();
@@ -194,10 +199,8 @@ int main(int, char**)
     {
         glfwPollEvents();
 
-        scene.updateConfiguration(render_settings);
-
         /* Render the scene */
-        vol_render(renderer, &render_output, render_settings);
+        vol_render(renderer, scene, &render_output, render_settings);
 
         /* Render UI */
         window_ui.draw();

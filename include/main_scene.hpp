@@ -11,6 +11,7 @@ struct MainScene
     Camera** main_camera;
     ImplicitGeometry** geometry;
     Light** lights;
+    int count_lights;
     Classifier** classifier;
 
     MainScene();
