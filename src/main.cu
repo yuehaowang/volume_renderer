@@ -50,7 +50,7 @@ struct RenderingOutput
 ResourceManager resource_manager;
 
 
-void vol_render(VolumeRenderer& renderer, RenderingOutput* out)
+void vol_render(VolumeRenderer& renderer, RenderingOutput* out, RenderingConfig* render_settings)
 {
     int res_x = RESOLUTION_X;
     int res_y = RESOLUTION_Y;
@@ -63,7 +63,7 @@ void vol_render(VolumeRenderer& renderer, RenderingOutput* out)
 
 	// clock_t start_time = std::chrono::system_clock::now();
     
-    renderer.renderFrontToBack(pixel_array, res_x, res_y, SAMPLE_STEP_LENGTH);
+    renderer.renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
 
     // clock_t end_time = std::chrono::system_clock::now();
 	// double time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
@@ -197,7 +197,7 @@ int main(int, char**)
         scene.updateConfiguration(render_settings);
 
         /* Render the scene */
-        vol_render(renderer, &render_output);
+        vol_render(renderer, &render_output, render_settings);
 
         /* Render UI */
         window_ui.draw();

@@ -45,6 +45,7 @@ void GUI::drawControls()
     drawMenuBar();
     drawCameraPanel();
     drawLightPanel();
+    drawRaycastingPanel();
     
     ImGui::End();
 }
@@ -89,5 +90,15 @@ void GUI::drawLightPanel()
         ImGui::Text("Change light properties.");
         ImGui::SliderFloat("Light power", &render_settings->light_power, LIGHT_POWER_RANGE[0], LIGHT_POWER_RANGE[1]);
         ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
+    }
+}
+
+void GUI::drawRaycastingPanel()
+{
+    if (ImGui::CollapsingHeader("Ray Casting"))
+    {
+        ImGui::Text("Change parameters for ray casting.");
+        ImGui::SliderFloat("Sampling step length", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
+        // ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
     }
 }

@@ -12,7 +12,7 @@
 
 class GUI
 {
-private:
+protected:
     GLuint tex_ID;
     RenderingConfig* render_settings;
 
@@ -21,6 +21,7 @@ private:
     void drawMenuBar();
     void drawCameraPanel();
     void drawLightPanel();
+    void drawRaycastingPanel();
 
 public:
     GUI(GLuint tex, RenderingConfig* c);

@@ -14,4 +14,6 @@ __global__ void init_rendering_config(RenderingConfig* render_settings)
 
     render_settings->light_power = 1000;
     render_settings->light_rgb = Eigen::Vector3f(1, 1, 1);
+
+    render_settings->sampling_step_len = 0.008;
 }
