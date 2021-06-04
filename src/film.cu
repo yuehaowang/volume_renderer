@@ -3,7 +3,7 @@
 
 
 /**
- * Film class
+ * Film struct
  */
 
 __host__ __device__ Film::Film()

@@ -1,8 +1,7 @@
 #include <iostream>
 #include <string>
-#include <chrono>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include <stb_image_write.h>
 #include <stdio.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -16,77 +15,42 @@
 #include "volume_renderer.hpp"
 #include "res_manager.hpp"
 #include "gui.hpp"
+#include "render_output.hpp"
 
 
-#define clock_t std::chrono::time_point<std::chrono::system_clock>
-
-
-/**
- * A data structure for storing rendering output as texture
- */
-struct RenderingOutput
-{
-    struct cudaGraphicsResource* cuda_tex_resource;
-    GLuint gl_tex_ID;
-
-    RenderingOutput(int res_x, int res_y)
-    {
-        /* Create an OpenGL texture */
-        glGenTextures(1, &gl_tex_ID);
-        glBindTexture(GL_TEXTURE_2D, gl_tex_ID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, res_x, res_y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        /* Set texturing parameters */
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        /* Register the texture with CUDA */
-        checkCudaErrors(cudaGraphicsGLRegisterImage(&cuda_tex_resource, gl_tex_ID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
-    }
-};
-
-
+/* Manager of resources */
 ResourceManager resource_manager;
 
 
-void vol_render(VolumeRenderer& renderer, MainScene& scene, RenderingOutput* out, RenderingConfig* render_settings)
+void volumeRender(VolumeRenderer* renderer, MainScene* scene, RenderingOutput* out, RenderingConfig* render_settings)
 {
-    int res_x = RESOLUTION_X;
-    int res_y = RESOLUTION_Y;
+    int res_x = out->width;
+    int res_y = out->height;
 
     /* Update the scene according to the given rendering settings */
-    scene.updateConfiguration(render_settings);
+    scene->updateConfiguration(render_settings);
 
     /* Send the scene to the renderer */
-    renderer.setVolume(scene.geometry);
-    renderer.setCamera(scene.main_camera);
-    renderer.setLights(scene.lights, scene.count_lights);
-    renderer.setClassifier(scene.classifier);
+    renderer->setVolume(scene->geometry);
+    renderer->setCamera(scene->main_camera);
+    renderer->setLights(scene->lights, scene->count_lights);
+    renderer->setClassifier(scene->classifier);
 
     /* Render to a pixel array */
     Eigen::Vector3f* pixel_array;
     checkCudaErrors(cudaMallocManaged((void **)&pixel_array, res_x * res_y * sizeof(Eigen::Vector3f)));
-
-    // std::cout << "\n\nRendering..." << std::endl;
-
-	// clock_t start_time = std::chrono::system_clock::now();
     
-    renderer.renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
-
-    // clock_t end_time = std::chrono::system_clock::now();
-	// double time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-	// std::cout << "\nTime elapsed: " << time_elapsed << " ms" << std::endl;
+    renderer->renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
 
     /* Store the rendering result in bytes */
-    int num_bytes = res_x * res_y * 4 * sizeof(unsigned char);
+    int num_bytes = res_x * res_y * RGBA_CHANNELS * sizeof(unsigned char);
     unsigned char* img_data;
     checkCudaErrors(cudaMallocManaged((void **)&img_data, num_bytes));
 
-    int tx = 8, ty = 8;
+    int tx = CUDA_BLOCK_THREADS_X, ty = CUDA_BLOCK_THREADS_Y;
     dim3 blocks(res_x / tx + 1, res_y / ty + 1);
     dim3 threads(tx, ty);
-    pixelArrayToBytes<<<blocks, threads>>>(pixel_array, img_data, res_x, res_y);
+    ImageUtils::pixelArrayToBytesRGBA<<<blocks, threads>>>(pixel_array, img_data, res_x, res_y);
     checkCudaErrors(cudaDeviceSynchronize());
 
     //stbi_write_png(OUTPUT_FILE, res_x, res_y, 4, img_data, 0);
@@ -110,7 +74,7 @@ static void glfwErrorCallback(int error, const char* description)
 }
 
 
-GLFWwindow* init_window()
+GLFWwindow* initWindow()
 {
     /* Initialize GLFW */
     glfwSetErrorCallback(glfwErrorCallback);
@@ -138,7 +102,7 @@ GLFWwindow* init_window()
 }
 
 
-void init_imgui(GLFWwindow* window)
+void initImGui(GLFWwindow* window)
 {
     /* Setup Dear ImGui context */
     IMGUI_CHECKVERSION();
@@ -161,16 +125,19 @@ void init_imgui(GLFWwindow* window)
 
 int main(int, char**)
 {
-    /* Setup scene */
-    MainScene scene;
+    /* Set CUDA device */
+    cudaSetDevice(CUDA_DEVICE_ID);
 
+    /* Setup main scene */
+    MainScene* scene = new MainScene();
     /* Setup volume renderer */
-    VolumeRenderer renderer;
+    VolumeRenderer* renderer = new VolumeRenderer();
 
     /* Initialize window */
-    GLFWwindow* window = init_window();
+    GLFWwindow* window = initWindow();
     if (!window)
     {
+        fprintf(stderr, "Failed to create GLFW window!\n");
         return 1;
     }
     /* Initialize OpenGL loader */
@@ -180,27 +147,35 @@ int main(int, char**)
         return 1;
     }
     /* Initialize ImGui */
-    init_imgui(window);
+    initImGui(window);
 
-    /* Rendering output */    
-    RenderingOutput render_output(RESOLUTION_X, RESOLUTION_Y);
+    /* Rendering output */
+    RenderingOutput* render_output = new RenderingOutput(RESOLUTION_X, RESOLUTION_Y);
 
-    /* Rendering settings */
+    /* Initialize rendering settings */
     RenderingConfig* render_settings;
     checkCudaErrors(cudaMallocManaged((void**)&render_settings, sizeof(RenderingConfig)));
-    init_rendering_config<<<1, 1>>>(render_settings);
+    initRenderingConfig<<<1, 1>>>(render_settings);
     checkCudaErrors(cudaDeviceSynchronize());
-
+    
     /* Initialize GUI */
-    GUI window_ui(render_output.gl_tex_ID, render_settings);
+    GUI window_ui(render_output->gl_tex_ID, render_settings);
+
+    int curr_render_interval_idx = 0;
 
     /* Main loop */
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
 
-        /* Render the scene */
-        vol_render(renderer, scene, &render_output, render_settings);
+        /* Control the refreshing rate according to the rendering interval */
+        if (curr_render_interval_idx++ >= render_settings->rendering_interval)
+        {
+            /* Render the scene */
+            volumeRender(renderer, scene, render_output, render_settings);
+
+            curr_render_interval_idx = 0;
+        }
 
         /* Render UI */
         window_ui.draw();
@@ -222,6 +197,11 @@ int main(int, char**)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    cudaFree(render_settings);
+    delete render_output;
+    delete scene;
+    delete renderer;
 
     return 0;
 }

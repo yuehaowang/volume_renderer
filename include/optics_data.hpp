@@ -7,6 +7,7 @@
 /**
  * A data structure for storing optical data
  */
+
 struct OpticsData
 {
     Eigen::Vector3f transparency = Eigen::Vector3f(1.0f, 1.0f, 1.0f);

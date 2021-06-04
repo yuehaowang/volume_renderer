@@ -22,6 +22,7 @@ protected:
     void drawCameraPanel();
     void drawLightPanel();
     void drawRaycastingPanel();
+    void drawPerformancePanel();
 
 public:
     GUI(GLuint tex, RenderingConfig* c);

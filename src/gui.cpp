@@ -46,6 +46,7 @@ void GUI::drawControls()
     drawCameraPanel();
     drawLightPanel();
     drawRaycastingPanel();
+    drawPerformancePanel();
     
     ImGui::End();
 }
@@ -98,7 +99,18 @@ void GUI::drawRaycastingPanel()
     if (ImGui::CollapsingHeader("Ray Casting"))
     {
         ImGui::Text("Change parameters for ray casting.");
-        ImGui::SliderFloat("Sampling step length", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
-        // ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
+        ImGui::SliderFloat("Sampling step", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
+    }
+}
+
+void GUI::drawPerformancePanel()
+{
+    if (ImGui::CollapsingHeader("Performance"))
+    {
+        ImGui::Text("Options and information for improving performance.");
+        ImGui::Text("Performance: %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Spacing(); ImGui::Spacing();
+        int input_uint_step = 1;
+        ImGui::InputScalar("Rendering interval", ImGuiDataType_U8, &render_settings->rendering_interval, &input_uint_step);
     }
 }

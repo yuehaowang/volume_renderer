@@ -37,8 +37,6 @@ namespace MathUtils
 {
     /* Clamps the input x to the closed range [lo, hi] */
     __host__ __device__ float clamp(float x, float lo, float hi);
-    /* Performs Gamma correction on x and outputs an integer between 0-255. */
-    __host__ __device__ unsigned char gammaCorrection(float x);
     /* Guassian function */
     __host__ __device__ float Gaussian(float mu, float sigma, float x);
 };
@@ -66,7 +64,13 @@ __host__ T* cudaToDevice(T* h_ptr)
 
 
 /**
- * Converts RGB pixel array to byte array with 4 channels (RGBA)
+ * Image processing utilities
  */
 
-__global__ void pixelArrayToBytes(Eigen::Vector3f* pix_arr, unsigned char* bytes, int res_x, int res_y);
+namespace ImageUtils
+{
+    /* Performs Gamma correction on x and outputs an integer between 0-255. */
+    __host__ __device__ unsigned char gammaCorrection(float x);
+    /* Converts RGB pixel array to byte array with 4 channels (RGBA) */
+    __global__ void pixelArrayToBytesRGBA(Eigen::Vector3f* pix_arr, unsigned char* bytes, int res_x, int res_y);
+};

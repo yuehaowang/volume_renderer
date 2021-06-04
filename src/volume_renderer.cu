@@ -1,8 +1,12 @@
-#include "utils.hpp"
-#include "optics_data.hpp"
 #include "volume_renderer.hpp"
+#include "optics_data.hpp"
 #include "config.hpp"
+#include "utils.hpp"
 
+
+/**
+ * Kernels for ray casting and image composition
+ */
 
 __device__ static void compositeFrontToBack(
     Eigen::Vector3f &color_dst, Eigen::Vector3f &alpha_dst,
@@ -111,8 +115,8 @@ void VolumeRenderer::setClassifier(Classifier** cls)
 
 void VolumeRenderer::renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, int res_y, float dt)
 {
-    int tx = 16;
-    int ty = 16;
+    int tx = CUDA_BLOCK_THREADS_X;
+    int ty = CUDA_BLOCK_THREADS_Y;
     dim3 blocks(res_x / tx + 1, res_y / ty + 1);
     dim3 threads(tx, ty);
     rayIntegral<<<blocks, threads>>>(pixel_array, geometry, main_camera, lights, count_lights, classifier, dt);

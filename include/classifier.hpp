@@ -15,6 +15,7 @@
 class Classifier
 {
 public:
+    __host__ __device__ virtual float transfer(VolumeSampleData v_data) const = 0;
     __host__ __device__ virtual OpticsData transfer(VolumeSampleData v_data, const Camera* cam, Light** lis, int lis_num, float dt) const = 0;
 };
 
@@ -30,5 +31,6 @@ protected:
 
 public:
     __host__ __device__ IsosurfaceClassifier(float isoval);
+    __host__ __device__ virtual float transfer(VolumeSampleData v_data) const;
     __host__ __device__ virtual OpticsData transfer(VolumeSampleData v_data, const Camera* cam, Light** lis, int lis_num, float dt) const;
 };

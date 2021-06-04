@@ -1,4 +1,5 @@
 #pragma once
+#include <glad/glad.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "camera.hpp"
@@ -6,6 +7,10 @@
 #include "light.hpp"
 #include "implicit_geom.hpp"
 
+
+/**
+ * Renderer for volume data
+ */
 
 class VolumeRenderer
 {

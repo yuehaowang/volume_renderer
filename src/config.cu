@@ -2,7 +2,7 @@
 #include "utils.hpp"
 
 
-__global__ void init_rendering_config(RenderingConfig* render_settings)
+__global__ void initRenderingConfig(RenderingConfig* render_settings)
 {
     SINGLE_THREAD;
 
@@ -16,4 +16,6 @@ __global__ void init_rendering_config(RenderingConfig* render_settings)
     render_settings->light_rgb = Eigen::Vector3f(1, 1, 1);
 
     render_settings->sampling_step_len = 0.008;
+
+    render_settings->rendering_interval = 3;
 }

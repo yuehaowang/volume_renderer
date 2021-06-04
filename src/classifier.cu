@@ -15,11 +15,16 @@ __host__ __device__ IsosurfaceClassifier::IsosurfaceClassifier(float isoval)
 {
 }
 
+__host__ __device__ float IsosurfaceClassifier::transfer(VolumeSampleData v_data) const
+{
+    return MathUtils::Gaussian(isovalue, 0.01, v_data.value);
+}
+
 __host__ __device__ OpticsData IsosurfaceClassifier::transfer(VolumeSampleData v_data, const Camera* cam, Light** lis, int lis_num, float dt) const
 {
     OpticsData optics;
 
-    float val = MathUtils::Gaussian(isovalue, 0.01, v_data.value);
+    float val = transfer(v_data);
 
     /* Emission */
     Eigen::Vector3f q(0, 0, 0);

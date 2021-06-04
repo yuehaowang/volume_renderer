@@ -6,6 +6,10 @@
 #include "config.hpp"
 
 
+/**
+ * Scene settings for rendering
+ */
+
 struct MainScene
 {
     Camera** main_camera;
@@ -15,5 +19,6 @@ struct MainScene
     Classifier** classifier;
 
     MainScene();
+    ~MainScene();
     void updateConfiguration(RenderingConfig* c);
 };

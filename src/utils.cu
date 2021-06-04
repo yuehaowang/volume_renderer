@@ -34,11 +34,6 @@ __host__ __device__ float MathUtils::clamp(float x, float lo, float hi)
     return x < lo ? lo : x > hi ? hi : x;
 }
 
-__host__ __device__ unsigned char MathUtils::gammaCorrection(float x)
-{
-	return (unsigned char)(pow(MathUtils::clamp(x, 0.0, 1.0), 1 / 2.2) * 255);
-}
-
 __host__ __device__ float MathUtils::Gaussian(float mu, float sigma, float x)
 {
     if (std::isinf(x) || std::isnan(x))
@@ -66,10 +61,16 @@ void checkCuda(cudaError_t result, char const *const func, const char *const fil
 
 
 /**
- * Function: pixelArrayToBytes
+ * ImageUtils namespace
  */
 
-__global__ void pixelArrayToBytes(Eigen::Vector3f* pix_arr, unsigned char* bytes, int res_x, int res_y)
+
+__host__ __device__ unsigned char ImageUtils::gammaCorrection(float x)
+{
+	return (unsigned char)(pow(MathUtils::clamp(x, 0.0, 1.0), 1 / 2.2) * 255);
+}
+
+__global__ void ImageUtils::pixelArrayToBytesRGBA(Eigen::Vector3f* pix_arr, unsigned char* bytes, int res_x, int res_y)
 {
     int dx = blockIdx.x * blockDim.x + threadIdx.x;
     int dy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -80,9 +81,11 @@ __global__ void pixelArrayToBytes(Eigen::Vector3f* pix_arr, unsigned char* bytes
     }
 
     int i = dy * res_x + dx;
+    /* Byte arrays' +y axes are downward */
     int j = (res_y - dy) * res_x + dx;
-    bytes[j * 4] = MathUtils::gammaCorrection(pix_arr[i].x());
-    bytes[j * 4 + 1] = MathUtils::gammaCorrection(pix_arr[i].y());
-    bytes[j * 4 + 2] = MathUtils::gammaCorrection(pix_arr[i].z());
+
+    bytes[j * 4] = ImageUtils::gammaCorrection(pix_arr[i].x());
+    bytes[j * 4 + 1] = ImageUtils::gammaCorrection(pix_arr[i].y());
+    bytes[j * 4 + 2] = ImageUtils::gammaCorrection(pix_arr[i].z());
     bytes[j * 4 + 3] = 255;
 }

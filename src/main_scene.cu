@@ -1,4 +1,3 @@
-#pragma once
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "main_scene.hpp"
@@ -7,14 +6,21 @@
 #include "config.hpp"
 
 
-__global__ static void create_implicit_geometry(ImplicitGeometry** geom)
+__global__ static void createImplicitGeometry(ImplicitGeometry** geom)
 {
     SINGLE_THREAD;
 
     *geom = new PorousSurface(Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(2.0, 2.0, 2.0));
 }
 
-__global__ static void create_main_camera(Camera** cam, int res_x, int res_y)
+__global__ static void deleteImplicitGeometry(ImplicitGeometry** geom)
+{
+    SINGLE_THREAD;
+
+    delete *geom;
+}
+
+__global__ static void createMainCamera(Camera** cam, int res_x, int res_y)
 {
     SINGLE_THREAD;
 
@@ -22,7 +28,14 @@ __global__ static void create_main_camera(Camera** cam, int res_x, int res_y)
     *cam = new Camera(Eigen::Vector3f(0, 0, 0), 45.0, film_res);
 }
 
-__global__ static void update_main_camera(Camera** cam, float azimuth, float polar, float r, ImplicitGeometry** geom)
+__global__ static void deleteMainCamera(Camera** cam)
+{
+    SINGLE_THREAD;
+
+    delete *cam;
+}
+
+__global__ static void updateMainCamera(Camera** cam, float azimuth, float polar, float r, ImplicitGeometry** geom)
 {
     SINGLE_THREAD;
 
@@ -50,7 +63,7 @@ __global__ static void update_main_camera(Camera** cam, float azimuth, float pol
     (*cam)->lookAt(camera_look_at, ref_up);
 }
 
-__global__ static void create_lights(Light** lis, int lis_num, ImplicitGeometry** geom)
+__global__ static void createLights(Light** lis, int lis_num, ImplicitGeometry** geom)
 {
     SINGLE_THREAD;
 
@@ -72,7 +85,17 @@ __global__ static void create_lights(Light** lis, int lis_num, ImplicitGeometry*
     }
 }
 
-__global__ static void update_lights(Light** lis, int lis_num, Eigen::Vector3f rgb, float power)
+__global__ static void deleteLights(Light** lis, int lis_num)
+{
+    SINGLE_THREAD;
+
+    for (int i = 0; i < lis_num; ++i)
+    {
+        delete lis[i];
+    }
+}
+
+__global__ static void updateLights(Light** lis, int lis_num, Eigen::Vector3f rgb, float power)
 {
     SINGLE_THREAD;
 
@@ -82,11 +105,18 @@ __global__ static void update_lights(Light** lis, int lis_num, Eigen::Vector3f r
     }
 }
 
-__global__ static void create_classifier(Classifier** cls)
+__global__ static void createClassifier(Classifier** cls)
 {
     SINGLE_THREAD;
 
     *cls = new IsosurfaceClassifier(0.0);
+}
+
+__global__ static void deleteClassifier(Classifier** cls)
+{
+    SINGLE_THREAD;
+
+    delete *cls;
 }
 
 
@@ -108,23 +138,36 @@ MainScene::MainScene()
     Camera** d_camera;
     checkCudaErrors(cudaMalloc((void**)&d_camera, sizeof(Camera*)));
 
-    create_implicit_geometry<<<1, 1>>>(d_geom);
-    create_main_camera<<<1, 1>>>(d_camera, res_x, res_y);
-    create_lights<<<1, 1>>>(d_lis, LIGHT_NUM, d_geom);
-    create_classifier<<<1, 1>>>(d_cls);
+    createImplicitGeometry<<<1, 1>>>(d_geom);
+    createMainCamera<<<1, 1>>>(d_camera, res_x, res_y);
+    createLights<<<1, 1>>>(d_lis, LIGHT_NUM, d_geom);
+    createClassifier<<<1, 1>>>(d_cls);
     checkCudaErrors(cudaDeviceSynchronize());
 
-    main_camera = d_camera;
     geometry = d_geom;
+    main_camera = d_camera;
     classifier = d_cls;
     lights = d_lis;
     count_lights = LIGHT_NUM;
 }
 
+MainScene::~MainScene()
+{
+    deleteImplicitGeometry<<<1, 1>>>(geometry);
+    deleteMainCamera<<<1, 1>>>(main_camera);
+    deleteLights<<<1, 1>>>(lights, count_lights);
+    deleteClassifier<<<1, 1>>>(classifier);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    cudaFree(geometry);
+    cudaFree(main_camera);
+    cudaFree(classifier);
+    cudaFree(lights);
+}
 
 void MainScene::updateConfiguration(RenderingConfig* c)
 {
-    update_main_camera<<<1, 1>>>(main_camera, c->camera_pos_azimuth, c->camera_pos_polar, c->camera_pos_r, geometry);
-    update_lights<<<1, 1>>>(lights, LIGHT_NUM, c->light_rgb, c->light_power);
+    updateMainCamera<<<1, 1>>>(main_camera, c->camera_pos_azimuth, c->camera_pos_polar, c->camera_pos_r, geometry);
+    updateLights<<<1, 1>>>(lights, LIGHT_NUM, c->light_rgb, c->light_power);
     checkCudaErrors(cudaDeviceSynchronize());
 }

@@ -6,17 +6,21 @@
 #include "constant.hpp"
 
 
-/* Constant settings */
+/* Rendering output configurations */
 
-#define AMBIENT_MAGNITUDE 0.1f
-#define SPECULAR_SHININESS 16.0f
-
-#define LIGHT_NUM 3
-
-#define SAMPLE_STEP_LENGTH 0.008
 #define RESOLUTION_X 512
 #define RESOLUTION_Y 512
 #define OUTPUT_FILE "output.png"
+
+
+/* CUDA configurations */
+
+#define CUDA_BLOCK_THREADS_X 16
+#define CUDA_BLOCK_THREADS_Y 16
+#define CUDA_DEVICE_ID 0
+
+
+/* GUI configurations */
 
 #define UI_WINDOW_SIZE_W (RESOLUTION_X + 400)
 #define UI_WINDOW_SIZE_H (RESOLUTION_Y + 50)
@@ -35,9 +39,18 @@
 #define CAMERA_POLAR_RANGE Eigen::Vector2f(0, PI)
 #define CAMERA_RADIUS_RANGE Eigen::Vector2f(0.1f, 20.0f)
 
+#define LIGHT_NUM 3
 #define LIGHT_POWER_RANGE Eigen::Vector2f(1.0f, 5000.0f)
 
 #define SAMPLING_STEP_LEN_RANGE Eigen::Vector2f(0.001f, 0.1f)
+
+#define AMBIENT_MAGNITUDE 0.1f
+#define SPECULAR_SHININESS 16.0f
+
+
+/**
+ * A data structure for storing rendering configurations 
+ */
 
 struct RenderingConfig
 {
@@ -49,7 +62,8 @@ struct RenderingConfig
     float light_power;
 
     float sampling_step_len;
+
+    int rendering_interval;
 };
 
-__global__ void init_rendering_config(RenderingConfig* render_settings);
-
+__global__ void initRenderingConfig(RenderingConfig* render_settings);
