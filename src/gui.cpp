@@ -81,6 +81,15 @@ void GUI::drawMenuBar()
             {
                 scene->openScene(BUILTIN_GEOM_FLAME_HEAT_FIELD);
             }
+            if (ImGui::MenuItem("CT Head"))
+            {
+                scene->openScene(BUILTIN_GEOM_CT_HEAD);
+            }
+            if (ImGui::MenuItem("MR Brain"))
+            {
+                scene->openScene(BUILTIN_GEOM_MR_BRAIN);
+            }
+            
             ImGui::EndMenu();
         }
 

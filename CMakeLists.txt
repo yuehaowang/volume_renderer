@@ -74,7 +74,7 @@ foreach(FONT_FILE ${RESOURCE_FONT_FILES})
 	file(COPY ${FONT_FILE} DESTINATION ${PROJECT_BINARY_DIR}/resources/fonts/)
 endforeach()
 add_definitions(-DRESOUCES_DIRECTORY="${PROJECT_BINARY_DIR}/resources")
-message(STATUS "Resource files: " ${RESOURCE_IMG_FILES} ${RESOURCE_FONT_FILES})
+message(STATUS "Resource files: " ${RESOURCE_IMG_FILES} ${RESOURCE_BIN_FILES} ${RESOURCE_FONT_FILES})
 
 
 # Specific flags
