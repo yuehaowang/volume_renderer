@@ -1,3 +1,4 @@
+#include <string>
 #include "gui.hpp"
 
 
@@ -5,8 +6,9 @@
  * GUI class
  */
 
-GUI::GUI(GLuint tex, RenderingConfig* c)
-    : tex_ID(tex)
+GUI::GUI(MainScene* scn, GLuint tex, RenderingConfig* c)
+    : scene(scn)
+    , tex_ID(tex)
     , render_settings(c)
 {
 }
@@ -32,7 +34,7 @@ void GUI::drawVisualizer()
     ImGui::SetWindowPos(UI_VISUALIZATION_NAME, UI_VISUALIZATION_POS);
     ImGui::SetWindowSize(UI_VISUALIZATION_NAME, UI_VISUALIZATION_SIZE);
     ImGui::Begin(UI_VISUALIZATION_NAME, nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-    ImGui::Image((void*)(intptr_t)tex_ID, ImVec2(RESOLUTION_X, RESOLUTION_Y));
+    ImGui::Image((void*)(intptr_t)tex_ID, ImVec2(OUTPUT_RESOLUTION_X, OUTPUT_RESOLUTION_Y));
     ImGui::End();
 }
 
@@ -46,30 +48,112 @@ void GUI::drawControls()
     drawCameraPanel();
     drawLightPanel();
     drawRaycastingPanel();
+    drawTransferFunctionPanel();
     drawPerformancePanel();
+
+    // ImGui::ShowDemoWindow();
     
     ImGui::End();
 }
 
 void GUI::drawMenuBar()
 {
+    bool to_open_about_popup = false;
+    bool to_open_save_result_popup = false;
+
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("Open"))
         {
-            if (ImGui::MenuItem("Genus 2")) {}
-            if (ImGui::MenuItem("Wineglass")) {}
-            if (ImGui::MenuItem("Porous Surface")) {}
+            if (ImGui::MenuItem("Genus 2"))
+            {
+                scene->openScene(BUILTIN_GEOM_GENUS_TWO);
+            }
+            if (ImGui::MenuItem("Wineglass"))
+            {
+                scene->openScene(BUILTIN_GEOM_WINEGLASS);
+            }
+            if (ImGui::MenuItem("Porous Surface"))
+            {
+                scene->openScene(BUILTIN_GEOM_POROUS_SURFACE);
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Flame Heat Field"))
+            {
+                scene->openScene(BUILTIN_GEOM_FLAME_HEAT_FIELD);
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Tool"))
+        {
+            if (ImGui::MenuItem("Save Result"))
+            {
+                to_open_save_result_popup = true;
+            }
+            
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Help"))
         {
-            if (ImGui::MenuItem("About")) {}
+            if (ImGui::MenuItem("About"))
+            {
+                to_open_about_popup = true;
+            }
+            
             ImGui::EndMenu();
         }
 
         ImGui::EndMenuBar();
+    }
+
+    if (to_open_about_popup)
+    {
+        ImGui::OpenPopup("About");
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        to_open_about_popup = false;
+    }
+    if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Volume Renderer\n\nAn interactive volume visualization tool.\n\nCopyright 2021 Yuehao Wang\n\n\n");
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::EndPopup();
+    }
+
+    if (to_open_save_result_popup)
+    {
+        ImGui::OpenPopup("Save Result");
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        to_open_about_popup = false;
+    }
+    if (ImGui::BeginPopupModal("Save Result", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static char file_path[512] = "./output.png";
+        ImGui::Text("Please input the path to saving the result");
+        ImGui::InputText("Saving Path", file_path, IM_ARRAYSIZE(file_path));
+        ImGui::Separator();
+
+        if (ImGui::Button("Save", ImVec2(120, 0)))
+        {
+            scene->saveRenderingResult(std::string(file_path));
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::EndPopup();
     }
 }
 
@@ -100,6 +184,16 @@ void GUI::drawRaycastingPanel()
     {
         ImGui::Text("Change parameters for ray casting.");
         ImGui::SliderFloat("Sampling step", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
+    }
+}
+
+void GUI::drawTransferFunctionPanel()
+{
+    if (ImGui::CollapsingHeader("Transfer Function"))
+    {
+        const char* items[] = {"Isosurface", "Entire Volume"};
+        ImGui::Text("Tune the transfer function for visualization.");
+        ImGui::Combo("Classifier Type", (int*)&render_settings->classifier_type, items, IM_ARRAYSIZE(items)); //("Sampling step", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
     }
 }
 

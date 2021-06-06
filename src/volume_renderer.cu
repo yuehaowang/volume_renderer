@@ -9,7 +9,7 @@
  */
 
 __device__ static void compositeFrontToBack(
-    Eigen::Vector3f &color_dst, Eigen::Vector3f &alpha_dst,
+    Eigen::Vector3f& color_dst, Eigen::Vector3f& alpha_dst,
     Eigen::Vector3f color_src, Eigen::Vector3f alpha_src)
 {
     color_dst = color_dst + (Eigen::Vector3f::Ones() - alpha_dst).cwiseProduct(color_src);
@@ -44,17 +44,8 @@ __global__ static void rayIntegral(
         {
             /* Get position of the sampled point */
             Eigen::Vector3f p = ray.getPoint(t);
-            /* Get the relative position */
-            Eigen::Vector3f geom_p = p - (*geom)->getBBox().getCenter();
-            /* Get the value at the sampled point */
-            float val = (*geom)->getValue(geom_p);
-            /* Get the gradient at the sampled point */
-            Eigen::Vector3f grad = (*geom)->computeGradient(geom_p);
-
-            VolumeSampleData pt_data;
-            pt_data.position = p;
-            pt_data.gradient = grad;
-            pt_data.value = val;
+            /* Sample the point on the geometry */
+            VolumeSampleData pt_data = (*geom)->sample(p);
 
             /* Get optical data by transfer function */
             OpticsData opt_d = (*cls)->transfer(pt_data, *cam, lis, lis_num, dt);

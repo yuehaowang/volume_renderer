@@ -26,6 +26,8 @@ namespace StrUtils
     __host__ void rtrim(std::string& s);
     /* Trim from both left and right */
     __host__ void trim(std::string& s);
+    /* Starts with */
+    __host__ bool startsWith(const std::string& s, const std::string& prefix);
 };
 
 
@@ -53,11 +55,11 @@ namespace MathUtils
 __host__ void checkCuda(cudaError_t result, char const *const func, const char *const file, int const line);
 
 template<typename T>
-__host__ T* cudaToDevice(T* h_ptr)
+__host__ T* cudaToDevice(T* h_ptr, int num = 1)
 {
     T* d_ptr;
-    checkCudaErrors(cudaMallocManaged((void**)&d_ptr, sizeof(T)));
-    checkCudaErrors(cudaMemcpy(d_ptr, h_ptr, sizeof(T), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMallocManaged((void**)&d_ptr, sizeof(T) * num));
+    checkCudaErrors(cudaMemcpy(d_ptr, h_ptr, sizeof(T) * num, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaDeviceSynchronize());
     return d_ptr;
 }

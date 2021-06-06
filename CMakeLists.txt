@@ -59,11 +59,16 @@ message(STATUS "Source files: " ${SOURCE_FILES})
 file(GLOB_RECURSE RESOURCE_IMG_FILES 
     resources/*.png,
 	resources/*.jpg)
+file(GLOB_RECURSE RESOURCE_BIN_FILES 
+    resources/*.bin)
 file(GLOB_RECURSE RESOURCE_FONT_FILES 
 	3rdLibs/imgui/misc/fonts/*.ttf)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/resources ${PROJECT_BINARY_DIR}/resources/images ${PROJECT_BINARY_DIR}/resources/fonts)
 foreach(IMG_FILE ${RESOURCE_IMG_FILES})
 	file(COPY ${IMG_FILE} DESTINATION ${PROJECT_BINARY_DIR}/resources/images/)
+endforeach()
+foreach(BIN_FILE ${RESOURCE_BIN_FILES})
+	file(COPY ${BIN_FILE} DESTINATION ${PROJECT_BINARY_DIR}/resources/bin/)
 endforeach()
 foreach(FONT_FILE ${RESOURCE_FONT_FILES})
 	file(COPY ${FONT_FILE} DESTINATION ${PROJECT_BINARY_DIR}/resources/fonts/)

@@ -1,7 +1,5 @@
 #include <iostream>
 #include <string>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
 #include <stdio.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -22,57 +20,10 @@
 ResourceManager resource_manager;
 
 
-void volumeRender(VolumeRenderer* renderer, MainScene* scene, RenderingOutput* out, RenderingConfig* render_settings)
-{
-    int res_x = out->width;
-    int res_y = out->height;
-
-    /* Update the scene according to the given rendering settings */
-    scene->updateConfiguration(render_settings);
-
-    /* Send the scene to the renderer */
-    renderer->setVolume(scene->geometry);
-    renderer->setCamera(scene->main_camera);
-    renderer->setLights(scene->lights, scene->count_lights);
-    renderer->setClassifier(scene->classifier);
-
-    /* Render to a pixel array */
-    Eigen::Vector3f* pixel_array;
-    checkCudaErrors(cudaMallocManaged((void **)&pixel_array, res_x * res_y * sizeof(Eigen::Vector3f)));
-    
-    renderer->renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
-
-    /* Store the rendering result in bytes */
-    int num_bytes = res_x * res_y * RGBA_CHANNELS * sizeof(unsigned char);
-    unsigned char* img_data;
-    checkCudaErrors(cudaMallocManaged((void **)&img_data, num_bytes));
-
-    int tx = CUDA_BLOCK_THREADS_X, ty = CUDA_BLOCK_THREADS_Y;
-    dim3 blocks(res_x / tx + 1, res_y / ty + 1);
-    dim3 threads(tx, ty);
-    ImageUtils::pixelArrayToBytesRGBA<<<blocks, threads>>>(pixel_array, img_data, res_x, res_y);
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    //stbi_write_png(OUTPUT_FILE, res_x, res_y, 4, img_data, 0);
-
-    /* Map CUDA device memory to a texture resource */
-    cudaArray *texture_ptr;
-	checkCudaErrors(cudaGraphicsMapResources(1, &(out->cuda_tex_resource), 0));
-	checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&texture_ptr, out->cuda_tex_resource, 0, 0));
-	checkCudaErrors(cudaMemcpyToArray(texture_ptr, 0, 0, img_data, num_bytes, cudaMemcpyDeviceToDevice));
-    checkCudaErrors(cudaDeviceSynchronize());
-	checkCudaErrors(cudaGraphicsUnmapResources(1, &(out->cuda_tex_resource), 0));
-
-    cudaFree(pixel_array);
-    cudaFree(img_data);
-}
-
-
 static void glfwErrorCallback(int error, const char* description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
-
 
 GLFWwindow* initWindow()
 {
@@ -101,7 +52,6 @@ GLFWwindow* initWindow()
     return window;
 }
 
-
 void initImGui(GLFWwindow* window)
 {
     /* Setup Dear ImGui context */
@@ -122,6 +72,55 @@ void initImGui(GLFWwindow* window)
     io.Fonts->AddFontDefault();
 }
 
+void volumeRender(VolumeRenderer* renderer, MainScene* scene, RenderingOutput* out, RenderingConfig* render_settings)
+{
+    int res_x = out->width;
+    int res_y = out->height;
+
+    if (!scene->scene_opened)
+    {
+        return;
+    }
+
+    /* Update the scene according to the given rendering settings */
+    scene->updateConfiguration(render_settings);
+
+    /* Send the scene to the renderer */
+    renderer->setVolume(scene->geometry);
+    renderer->setCamera(scene->main_camera);
+    renderer->setLights(scene->lights, scene->count_lights);
+    renderer->setClassifier(scene->using_classifier);
+
+    /* Render to a pixel array */
+    Eigen::Vector3f* pixel_array;
+    checkCudaErrors(cudaMallocManaged((void **)&pixel_array, res_x * res_y * sizeof(Eigen::Vector3f)));
+    
+    renderer->renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
+
+    /* Store the rendering result in bytes */
+    int num_bytes = res_x * res_y * RGBA_CHANNELS * sizeof(unsigned char);
+    unsigned char* img_data;
+    checkCudaErrors(cudaMallocManaged((void **)&img_data, num_bytes));
+
+    int tx = CUDA_BLOCK_THREADS_X, ty = CUDA_BLOCK_THREADS_Y;
+    dim3 blocks(res_x / tx + 1, res_y / ty + 1);
+    dim3 threads(tx, ty);
+    ImageUtils::pixelArrayToBytesRGBA<<<blocks, threads>>>(pixel_array, img_data, res_x, res_y);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    scene->processRenderingResult(img_data);
+
+    /* Map CUDA device memory to a texture resource */
+    cudaArray *texture_ptr;
+	checkCudaErrors(cudaGraphicsMapResources(1, &(out->cuda_tex_resource), 0));
+	checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&texture_ptr, out->cuda_tex_resource, 0, 0));
+	checkCudaErrors(cudaMemcpyToArray(texture_ptr, 0, 0, img_data, num_bytes, cudaMemcpyDeviceToDevice));
+    checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaGraphicsUnmapResources(1, &(out->cuda_tex_resource), 0));
+
+    cudaFree(pixel_array);
+    cudaFree(img_data);
+}
 
 int main(int, char**)
 {
@@ -150,7 +149,7 @@ int main(int, char**)
     initImGui(window);
 
     /* Rendering output */
-    RenderingOutput* render_output = new RenderingOutput(RESOLUTION_X, RESOLUTION_Y);
+    RenderingOutput* render_output = new RenderingOutput(OUTPUT_RESOLUTION_X, OUTPUT_RESOLUTION_Y);
 
     /* Initialize rendering settings */
     RenderingConfig* render_settings;
@@ -159,7 +158,7 @@ int main(int, char**)
     checkCudaErrors(cudaDeviceSynchronize());
     
     /* Initialize GUI */
-    GUI window_ui(render_output->gl_tex_ID, render_settings);
+    GUI window_ui(scene, render_output->gl_tex_ID, render_settings);
 
     int curr_render_interval_idx = 0;
 

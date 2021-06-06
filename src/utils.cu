@@ -8,20 +8,25 @@
  * StrUtils namespace
  */
 
-void StrUtils::ltrim(std::string& s)
+__host__ void StrUtils::ltrim(std::string& s)
 {
    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 }
 
-void StrUtils::rtrim(std::string& s)
+__host__ void StrUtils::rtrim(std::string& s)
 {
     s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 }
 
-void StrUtils::trim(std::string& s)
+__host__ void StrUtils::trim(std::string& s)
 {
     ltrim(s);
     rtrim(s);
+}
+
+__host__ bool StrUtils::startsWith(const std::string& s, const std::string& prefix)
+{
+    return s.find(prefix) == 0;
 }
 
 
@@ -63,7 +68,6 @@ void checkCuda(cudaError_t result, char const *const func, const char *const fil
 /**
  * ImageUtils namespace
  */
-
 
 __host__ __device__ unsigned char ImageUtils::gammaCorrection(float x)
 {

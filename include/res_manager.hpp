@@ -8,7 +8,7 @@
 
 class ResourceManager
 {
-private:
+protected:
     std::string resource_directory;
 
 public:

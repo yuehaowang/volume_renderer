@@ -1,16 +1,41 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 #include "main_scene.hpp"
 #include "utils.hpp"
 #include "constant.hpp"
 #include "config.hpp"
+#include "res_manager.hpp"
+#include "constant.hpp"
 
 
-__global__ static void createImplicitGeometry(ImplicitGeometry** geom)
+extern ResourceManager resource_manager;
+
+
+__global__ static void createImplicitSurface(ImplicitGeometry** geom, ImplicitGeometry::ImplicitGeometryType geom_type)
 {
     SINGLE_THREAD;
 
-    *geom = new PorousSurface(Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(2.0, 2.0, 2.0));
+    switch (geom_type)
+    {
+        case ImplicitGeometry::GENUS2:
+            *geom = new GenusTwoSurface(Eigen::Vector3f(4.0, 4.0, 4.0));
+            break;
+        case ImplicitGeometry::WINEGLASS:
+            *geom = new WineGlassSurface(Eigen::Vector3f(5.0, 5.0, 6.0));
+            break;
+        case ImplicitGeometry::POROUS_SURFACE:
+            *geom = new PorousSurface(Eigen::Vector3f(2.0, 2.0, 2.0));
+            break;
+    }
+}
+
+__global__ static void createVolume(ImplicitGeometry** geom, VolumeSampleData* vol_data, Eigen::Vector3i grid_dim, Eigen::Vector3f range)
+{
+    SINGLE_THREAD;
+
+    *geom = new Volume(vol_data, grid_dim, range);
 }
 
 __global__ static void deleteImplicitGeometry(ImplicitGeometry** geom)
@@ -105,18 +130,40 @@ __global__ static void updateLights(Light** lis, int lis_num, Eigen::Vector3f rg
     }
 }
 
-__global__ static void createClassifier(Classifier** cls)
+__global__ static void createClassifiers(Classifier** cls, int cls_num)
 {
     SINGLE_THREAD;
 
-    *cls = new IsosurfaceClassifier(0.0);
+    for (int i = 0; i < cls_num; i++)
+    {
+        switch ((Classifier::ClassifierType)i)
+        {
+        case Classifier::ClassifierType::ISOSURFACE:
+            cls[i] = new IsosurfaceClassifier;
+            break;
+        
+        case Classifier::ClassifierType::VOLUME:
+            cls[i] = new VolumeClassifier;
+            break;
+        }
+    }
 }
 
-__global__ static void deleteClassifier(Classifier** cls)
+__global__ static void deleteClassifiers(Classifier** cls, int cls_num)
 {
     SINGLE_THREAD;
 
-    delete *cls;
+    for (int i = 0; i < cls_num; ++i)
+    {
+        delete cls[i];
+    }
+}
+
+__global__ static void updateClassifier(Classifier** cls, Classifier** using_cls, Classifier::ClassifierType select_cls)
+{
+    SINGLE_THREAD;
+
+    *using_cls = cls[(int)select_cls];
 }
 
 
@@ -125,49 +172,140 @@ __global__ static void deleteClassifier(Classifier** cls)
  */
 
 MainScene::MainScene()
+    : geometry(nullptr)
+    , main_camera(nullptr)
+    , lights(nullptr)
+    , count_lights(0)
+    , classifiers(nullptr)
+    , using_classifier(nullptr)
+    , scene_opened(false)
+    , save_next_frame(false)
 {
-    int res_x = RESOLUTION_X;
-    int res_y = RESOLUTION_Y;
+    openScene(DEFAULT_OPEN_GEOM);
 
-    ImplicitGeometry** d_geom;
-    checkCudaErrors(cudaMalloc((void**)&d_geom, sizeof(ImplicitGeometry*)));
-    Light** d_lis;
-    checkCudaErrors(cudaMalloc((void**)&d_lis, sizeof(Light*) * LIGHT_NUM));
     Classifier** d_cls;
-    checkCudaErrors(cudaMalloc((void**)&d_cls, sizeof(Classifier*)));
+    checkCudaErrors(cudaMalloc((void**)&d_cls, sizeof(Classifier*) * NUM_CLASSIFIER_TYPES));
+    Classifier** d_using_cls;
+    checkCudaErrors(cudaMalloc((void**)&d_using_cls, sizeof(Classifier*)));
     Camera** d_camera;
     checkCudaErrors(cudaMalloc((void**)&d_camera, sizeof(Camera*)));
 
-    createImplicitGeometry<<<1, 1>>>(d_geom);
-    createMainCamera<<<1, 1>>>(d_camera, res_x, res_y);
-    createLights<<<1, 1>>>(d_lis, LIGHT_NUM, d_geom);
-    createClassifier<<<1, 1>>>(d_cls);
+    createMainCamera<<<1, 1>>>(d_camera, OUTPUT_RESOLUTION_X, OUTPUT_RESOLUTION_Y);
+    createClassifiers<<<1, 1>>>(d_cls, NUM_CLASSIFIER_TYPES);
     checkCudaErrors(cudaDeviceSynchronize());
 
-    geometry = d_geom;
     main_camera = d_camera;
-    classifier = d_cls;
-    lights = d_lis;
-    count_lights = LIGHT_NUM;
+    classifiers = d_cls;
+    using_classifier = d_using_cls;
 }
 
 MainScene::~MainScene()
 {
-    deleteImplicitGeometry<<<1, 1>>>(geometry);
+    closeScene();
+
     deleteMainCamera<<<1, 1>>>(main_camera);
-    deleteLights<<<1, 1>>>(lights, count_lights);
-    deleteClassifier<<<1, 1>>>(classifier);
+    deleteClassifiers<<<1, 1>>>(classifiers, NUM_CLASSIFIER_TYPES);
     checkCudaErrors(cudaDeviceSynchronize());
 
-    cudaFree(geometry);
     cudaFree(main_camera);
-    cudaFree(classifier);
-    cudaFree(lights);
+    cudaFree(classifiers);
+
+    main_camera = nullptr;
+    classifiers = nullptr;
+    using_classifier = nullptr;
 }
 
 void MainScene::updateConfiguration(RenderingConfig* c)
 {
     updateMainCamera<<<1, 1>>>(main_camera, c->camera_pos_azimuth, c->camera_pos_polar, c->camera_pos_r, geometry);
     updateLights<<<1, 1>>>(lights, LIGHT_NUM, c->light_rgb, c->light_power);
+    updateClassifier<<<1, 1>>>(classifiers, using_classifier, c->classifier_type);
     checkCudaErrors(cudaDeviceSynchronize());
+}
+
+void MainScene::closeScene()
+{
+    deleteImplicitGeometry<<<1, 1>>>(geometry);
+    deleteLights<<<1, 1>>>(lights, count_lights);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    cudaFree(geometry);
+    cudaFree(lights);
+
+    geometry = nullptr;
+    lights = nullptr;
+    count_lights = 0;
+    scene_opened = false;
+}
+
+void MainScene::openScene(const std::string& name)
+{
+    if (scene_opened)
+    {
+        closeScene();
+    }
+
+    ImplicitGeometry** d_geom;
+    checkCudaErrors(cudaMalloc((void**)&d_geom, sizeof(ImplicitGeometry*)));
+    Light** d_lis;
+    checkCudaErrors(cudaMalloc((void**)&d_lis, sizeof(Light*) * LIGHT_NUM));
+    
+
+    if (StrUtils::startsWith(name, BUILTIN_GEOM_GENUS_TWO))
+    {
+        createImplicitSurface<<<1, 1>>>(d_geom, ImplicitGeometry::GENUS2);
+    }
+    else if (StrUtils::startsWith(name, BUILTIN_GEOM_WINEGLASS))
+    {
+        createImplicitSurface<<<1, 1>>>(d_geom, ImplicitGeometry::WINEGLASS);
+    }
+    else if (StrUtils::startsWith(name, BUILTIN_GEOM_POROUS_SURFACE))
+    {
+        createImplicitSurface<<<1, 1>>>(d_geom, ImplicitGeometry::POROUS_SURFACE);
+    }
+    else
+    {
+        VolumeSampleData* d_vol_data;
+        Eigen::Vector3i grid_dim;
+        Eigen::Vector3f range;
+        if (Volume::readFromFile((resource_manager.getResource(name)).c_str(), &d_vol_data, grid_dim, range))
+        {
+            createVolume<<<1, 1>>>(d_geom, d_vol_data, grid_dim, range);
+        }
+        else
+        {
+            UNREACHABLE;
+        }
+    }
+    createLights<<<1, 1>>>(d_lis, LIGHT_NUM, d_geom);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    geometry = d_geom;
+    lights = d_lis;
+    count_lights = LIGHT_NUM;
+    scene_opened = true;
+}
+
+void MainScene::saveRenderingResult(const std::string& save_path)
+{
+    result_save_path = save_path;
+    save_next_frame = true;
+}
+
+void MainScene::processRenderingResult(unsigned char* bytes)
+{
+    if (save_next_frame)
+    {
+        printf("-- Saving the rendering result to %s...\n", result_save_path.c_str());
+        if (stbi_write_png(result_save_path.c_str(), OUTPUT_RESOLUTION_X, OUTPUT_RESOLUTION_Y, 4, bytes, 0))
+        {
+            printf("---- Successfully save the rendering result to %s\n", result_save_path.c_str());   
+        }
+        else
+        {
+            printf("---- Failed to save rendering result to %s\n", result_save_path.c_str());
+        }
+        save_next_frame = false;
+        result_save_path.clear();
+    }
 }
