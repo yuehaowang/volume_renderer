@@ -8,6 +8,7 @@
 #include "config.hpp"
 #include "res_manager.hpp"
 #include "constant.hpp"
+#include "tinycolormap_cuda.hpp"
 
 
 extern ResourceManager resource_manager;
@@ -159,11 +160,23 @@ __global__ static void deleteClassifiers(Classifier** cls, int cls_num)
     }
 }
 
-__global__ static void updateClassifier(Classifier** cls, Classifier** using_cls, Classifier::ClassifierType select_cls)
+__global__ static void updateClassifier(
+    Classifier** cls, Classifier** using_cls, Classifier::ClassifierType select_cls,
+    tinycolormap::ColormapType select_cm, Classifier::VisualizationTarget vis_tgt,
+    float isovalue, float sigma)
 {
     SINGLE_THREAD;
 
     *using_cls = cls[(int)select_cls];
+    (*using_cls)->setColormapType(select_cm);
+    (*using_cls)->setVisualizationTarget(vis_tgt);
+
+    if (select_cls == Classifier::ClassifierType::ISOSURFACE)
+    {
+        IsosurfaceClassifier* isosurf_cls = (IsosurfaceClassifier*)(*using_cls);
+        isosurf_cls->setSigma(sigma);
+        isosurf_cls->setIsovalue(isovalue);
+    }
 }
 
 
@@ -219,7 +232,9 @@ void MainScene::updateConfiguration(RenderingConfig* c)
 {
     updateMainCamera<<<1, 1>>>(main_camera, c->camera_pos_azimuth, c->camera_pos_polar, c->camera_pos_r, geometry);
     updateLights<<<1, 1>>>(lights, LIGHT_NUM, c->light_rgb, c->light_power);
-    updateClassifier<<<1, 1>>>(classifiers, using_classifier, c->classifier_type);
+    updateClassifier<<<1, 1>>>(
+        classifiers, using_classifier, c->classifier_type, c->colormap_type, c->visualize_target,
+        c->isosurface_classifier_isovalue, c->isosurface_classifier_sigma);
     checkCudaErrors(cudaDeviceSynchronize());
 }
 

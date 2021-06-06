@@ -43,6 +43,8 @@ public:
     __host__ __device__ virtual Eigen::Vector3f getMappedColor(float value, const Eigen::Vector3f& normal) const;
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const = 0;
     __host__ __device__ virtual OpticsData transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const = 0;
+    __host__ __device__ virtual void setColormapType(tinycolormap::ColormapType type);
+    __host__ __device__ virtual void setVisualizationTarget(VisualizationTarget vis_tgt);
 };
 
 
@@ -60,6 +62,8 @@ public:
     __host__ __device__ IsosurfaceClassifier();
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const;
     __host__ __device__ virtual OpticsData transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const;
+    __host__ __device__ virtual void setIsovalue(float v);
+    __host__ __device__ virtual void setSigma(float v);
 };
 
 
@@ -69,9 +73,6 @@ public:
 
 class VolumeClassifier : public Classifier
 {
-protected:
-    float min_transparency;
-
 public:
     __host__ __device__ VolumeClassifier();
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const;

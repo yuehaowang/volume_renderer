@@ -1,5 +1,6 @@
 #include <string>
 #include "gui.hpp"
+#include "utils.hpp"
 
 
 /**
@@ -50,8 +51,6 @@ void GUI::drawControls()
     drawRaycastingPanel();
     drawTransferFunctionPanel();
     drawPerformancePanel();
-
-    // ImGui::ShowDemoWindow();
     
     ImGui::End();
 }
@@ -117,7 +116,7 @@ void GUI::drawMenuBar()
     }
     if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Volume Renderer\n\nAn interactive volume visualization tool.\n\nCopyright 2021 Yuehao Wang\n\n\n");
+        ImGui::Text("Volume Renderer (v0.1.0)\n\nAn interactive volume visualization tool.\n\nCopyright 2021 Yuehao Wang\n\n\n");
         ImGui::Separator();
 
         if (ImGui::Button("OK", ImVec2(120, 0)))
@@ -187,13 +186,50 @@ void GUI::drawRaycastingPanel()
     }
 }
 
+static float imguiPlotGaussian(void* params, int i)
+{
+    float mu = ((float*)params)[0];
+    float sigma = ((float*)params)[1];
+    float half_n_val = ((float*)params)[2] / 2;
+    return MathUtils::Gaussian(mu * half_n_val, sigma * half_n_val, (i - half_n_val));
+}
+
 void GUI::drawTransferFunctionPanel()
 {
     if (ImGui::CollapsingHeader("Transfer Function"))
     {
-        const char* items[] = {"Isosurface", "Entire Volume"};
         ImGui::Text("Tune the transfer function for visualization.");
-        ImGui::Combo("Classifier Type", (int*)&render_settings->classifier_type, items, IM_ARRAYSIZE(items)); //("Sampling step", &render_settings->sampling_step_len, SAMPLING_STEP_LEN_RANGE[0], SAMPLING_STEP_LEN_RANGE[1]);
+
+        const char* cls_items[] = {"Isosurface", "Entire Volume"};
+        ImGui::Combo("Classifier type", (int*)&render_settings->classifier_type, cls_items, IM_ARRAYSIZE(cls_items));
+
+        const char* cm_items[] = {"Parula", "Heat", "Jet", "Turbo", "Hot", "Gray", "Magma", "Inferno", "Plasma", "Viridis", "Cividis", "Github"};
+        ImGui::Combo("Colormap", (int*)&render_settings->colormap_type, cm_items, IM_ARRAYSIZE(cm_items));
+
+        ImGui::AlignTextToFramePadding(); ImGui::Text("Visualization Target:");
+        ImGui::RadioButton("Normal-x", (int*)&render_settings->visualize_target, Classifier::VisualizationTarget::NORMAL_X);
+        ImGui::SameLine(); ImGui::RadioButton("Normal-y", (int*)&render_settings->visualize_target, Classifier::VisualizationTarget::NORMAL_Y);
+        ImGui::SameLine(); ImGui::RadioButton("Normal-z", (int*)&render_settings->visualize_target, Classifier::VisualizationTarget::NORMAL_Z);
+        ImGui::SameLine(); ImGui::RadioButton("Value", (int*)&render_settings->visualize_target, Classifier::VisualizationTarget::VALUE);
+        ImGui::Spacing();
+
+        ImGui::Separator(); ImGui::Spacing();
+
+        if (render_settings->classifier_type == Classifier::ClassifierType::ISOSURFACE)
+        {
+            ImGui::Text("Specific settings for Isosurface classifier.");
+            ImGui::InputFloat("Isovalue", &render_settings->isosurface_classifier_isovalue, 0.01);
+            ImGui::SliderFloat("Sigma", &render_settings->isosurface_classifier_sigma, ISOSURFACE_CLASSIFIER_SIGMA_RANGE[0], ISOSURFACE_CLASSIFIER_SIGMA_RANGE[1]);
+            
+            /* Limit the range of isovalue */
+            render_settings->isosurface_classifier_isovalue = MathUtils::clamp(
+                render_settings->isosurface_classifier_isovalue,
+                ISOSURFACE_CLASSIFIER_ISOVALUE_RANGE[0], ISOSURFACE_CLASSIFIER_ISOVALUE_RANGE[1]);
+
+            int values_count = 400;
+            float params[3] = {render_settings->isosurface_classifier_isovalue, render_settings->isosurface_classifier_sigma, (float)values_count};
+            ImGui::PlotLines("Transfer\nfunction", &imguiPlotGaussian, (void*)params, values_count, 0, NULL, 0.0f, 1.0f, ImVec2(0, 60));
+        }
     }
 }
 

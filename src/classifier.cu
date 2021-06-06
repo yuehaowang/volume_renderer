@@ -33,6 +33,16 @@ __host__ __device__ Eigen::Vector3f Classifier::getMappedColor(float value, cons
     }
 }
 
+__host__ __device__ void Classifier::setColormapType(tinycolormap::ColormapType type)
+{
+    cm_type = type;
+}
+
+__host__ __device__ void Classifier::setVisualizationTarget(VisualizationTarget vis_tgt)
+{
+    visualize_target = vis_tgt;
+}
+
 
 /**
  * IsosurfaceClassifier class
@@ -100,14 +110,24 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(const VolumeSample
     return optics;
 }
 
+__host__ __device__ void IsosurfaceClassifier::setIsovalue(float v)
+{
+    isovalue = v;
+}
+
+__host__ __device__ void IsosurfaceClassifier::setSigma(float v)
+{
+    sigma = v;
+}
+
+
 
 /**
  * VolumeClassifier class
  */
 
 __host__ __device__ VolumeClassifier::VolumeClassifier()
-    : min_transparency(0.0f)
-    , Classifier(1.0f, VisualizationTarget::VALUE)
+    : Classifier(1.0f, VisualizationTarget::VALUE)
 {
 }
 
@@ -160,7 +180,7 @@ __host__ __device__ OpticsData VolumeClassifier::transfer(const VolumeSampleData
         }
     }
 
-    optics.transparency = Eigen::Vector3f::Ones() * (exp(-val * kappa * dt) * (1.0 - min_transparency) + min_transparency);
+    optics.transparency = Eigen::Vector3f::Ones() * exp(-val * kappa * dt);
     optics.color = q * val * dt;
 
     return optics;

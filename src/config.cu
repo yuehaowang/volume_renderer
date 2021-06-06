@@ -18,6 +18,10 @@ __global__ void initRenderingConfig(RenderingConfig* render_settings)
     render_settings->sampling_step_len = 0.008;
 
     render_settings->classifier_type = Classifier::ClassifierType::ISOSURFACE;
+    render_settings->colormap_type = tinycolormap::ColormapType::Heat;
+    render_settings->visualize_target = Classifier::VisualizationTarget::VALUE;
+    render_settings->isosurface_classifier_isovalue = 0;
+    render_settings->isosurface_classifier_sigma = 0.01;
 
     render_settings->rendering_interval = 3;
 }

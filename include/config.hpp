@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include "tinycolormap_cuda.hpp"
 #include "constant.hpp"
 #include "classifier.hpp"
 
@@ -51,6 +52,9 @@
 
 #define SAMPLING_STEP_LEN_RANGE Eigen::Vector2f(0.001f, 0.1f)
 
+#define ISOSURFACE_CLASSIFIER_SIGMA_RANGE Eigen::Vector2f(0.005f, 0.1f)
+#define ISOSURFACE_CLASSIFIER_ISOVALUE_RANGE Eigen::Vector2f(-1.0f, 1.0f)
+
 #define AMBIENT_MAGNITUDE 0.1f
 #define SPECULAR_SHININESS 16.0f
 
@@ -71,6 +75,10 @@ struct RenderingConfig
     float sampling_step_len;
 
     Classifier::ClassifierType classifier_type;
+    tinycolormap::ColormapType colormap_type;
+    Classifier::VisualizationTarget visualize_target;
+    float isosurface_classifier_sigma;
+    float isosurface_classifier_isovalue;
 
     int rendering_interval;
 };
