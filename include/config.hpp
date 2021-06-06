@@ -55,8 +55,8 @@
 #define ISOSURFACE_CLASSIFIER_SIGMA_RANGE Eigen::Vector2f(0.005f, 0.1f)
 #define ISOSURFACE_CLASSIFIER_ISOVALUE_RANGE Eigen::Vector2f(-1.0f, 1.0f)
 
-#define AMBIENT_MAGNITUDE 0.1f
-#define SPECULAR_SHININESS 16.0f
+#define AMBIENT_MAGNITUDE_RANGE Eigen::Vector2f(0.01f, 0.5f)
+#define SPECULAR_SHININESS_RANGE Eigen::Vector2f(1.0f, 50.0f)
 
 
 /**
@@ -71,6 +71,8 @@ struct RenderingConfig
 
     Eigen::Vector3f light_rgb;
     float light_power;
+    float ambient_magnitude;
+    float specular_shininess;
 
     float sampling_step_len;
 

@@ -95,7 +95,9 @@ void volumeRender(VolumeRenderer* renderer, MainScene* scene, RenderingOutput* o
     Eigen::Vector3f* pixel_array;
     checkCudaErrors(cudaMallocManaged((void **)&pixel_array, res_x * res_y * sizeof(Eigen::Vector3f)));
     
-    renderer->renderFrontToBack(pixel_array, res_x, res_y, render_settings->sampling_step_len);
+    renderer->renderFrontToBack(
+        pixel_array, res_x, res_y, render_settings->ambient_magnitude,
+        render_settings->specular_shininess, render_settings->sampling_step_len);
 
     /* Store the rendering result in bytes */
     int num_bytes = res_x * res_y * RGBA_CHANNELS * sizeof(unsigned char);

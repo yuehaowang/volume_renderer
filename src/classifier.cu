@@ -60,7 +60,9 @@ __host__ __device__ float IsosurfaceClassifier::transfer(const VolumeSampleData&
     return MathUtils::Gaussian(isovalue, sigma, v_data.value);
 }
 
-__host__ __device__ OpticsData IsosurfaceClassifier::transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const
+__host__ __device__ OpticsData IsosurfaceClassifier::transfer(
+    const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num,
+    float ambient_magnitude, float specular_shininess, float dt) const
 {
     OpticsData optics;
 
@@ -83,7 +85,7 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(const VolumeSample
             Eigen::Vector3f surface_color = getMappedColor(val, normal);
 
             /* Ambient */
-            Eigen::Vector3f C_a = li->getRadiance() * AMBIENT_MAGNITUDE;
+            Eigen::Vector3f C_a = li->getRadiance() * ambient_magnitude;
 
             /* Compute light direction, light path distance, etc. */
             Eigen::Vector3f pos_diff = li->getPosition() - v_data.position;
@@ -96,7 +98,7 @@ __host__ __device__ OpticsData IsosurfaceClassifier::transfer(const VolumeSample
 
             /* Specular */
             Eigen::Vector3f halfway_dir = (view_dir + li_dir).normalized();
-            float spec = pow(max(normal.dot(halfway_dir), 0.0f), SPECULAR_SHININESS);
+            float spec = pow(max(normal.dot(halfway_dir), 0.0f), specular_shininess);
             Eigen::Vector3f C_s = spec * li->getRadiance();
 
             /* Add the emission contribution */
@@ -136,7 +138,9 @@ __host__ __device__ float VolumeClassifier::transfer(const VolumeSampleData& v_d
     return v_data.value;
 }
 
-__host__ __device__ OpticsData VolumeClassifier::transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const
+__host__ __device__ OpticsData VolumeClassifier::transfer(
+    const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num,
+    float ambient_magnitude, float specular_shininess, float dt) const
 {
     OpticsData optics;
 
@@ -159,7 +163,7 @@ __host__ __device__ OpticsData VolumeClassifier::transfer(const VolumeSampleData
             Eigen::Vector3f xsec_color = getMappedColor(val, normal);
 
             /* Ambient */
-            Eigen::Vector3f C_a = li->getRadiance() * AMBIENT_MAGNITUDE;
+            Eigen::Vector3f C_a = li->getRadiance() * ambient_magnitude;
 
             /* Compute light direction, light path distance, etc. */
             Eigen::Vector3f pos_diff = li->getPosition() - v_data.position;
@@ -172,7 +176,7 @@ __host__ __device__ OpticsData VolumeClassifier::transfer(const VolumeSampleData
 
             /* Specular */
             Eigen::Vector3f halfway_dir = (view_dir + li_dir).normalized();
-            float spec = pow(max(normal.dot(halfway_dir), 0.0f), SPECULAR_SHININESS);
+            float spec = pow(max(normal.dot(halfway_dir), 0.0f), specular_shininess);
             Eigen::Vector3f C_s = spec * li->getRadiance();
 
             /* Add the emission contribution */

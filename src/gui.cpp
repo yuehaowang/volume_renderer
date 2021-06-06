@@ -169,11 +169,13 @@ void GUI::drawCameraPanel()
 
 void GUI::drawLightPanel()
 {
-    if (ImGui::CollapsingHeader("Light"))
+    if (ImGui::CollapsingHeader("Lighting"))
     {
-        ImGui::Text("Change light properties.");
+        ImGui::Text("Change light and material properties.");
         ImGui::SliderFloat("Light power", &render_settings->light_power, LIGHT_POWER_RANGE[0], LIGHT_POWER_RANGE[1]);
         ImGui::ColorEdit3("Light color (RGB)", render_settings->light_rgb.data());
+        ImGui::SliderFloat("Ambient magnitude", &render_settings->ambient_magnitude, AMBIENT_MAGNITUDE_RANGE[0], AMBIENT_MAGNITUDE_RANGE[1]);
+        ImGui::SliderFloat("Specular shininess", &render_settings->specular_shininess, SPECULAR_SHININESS_RANGE[0], SPECULAR_SHININESS_RANGE[1]);
     }
 }
 

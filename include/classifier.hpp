@@ -42,7 +42,9 @@ public:
     __host__ __device__ Classifier(float K = 0.1f, VisualizationTarget vis_tgt = VisualizationTarget::VALUE, tinycolormap::ColormapType cm = tinycolormap::ColormapType::Heat);
     __host__ __device__ virtual Eigen::Vector3f getMappedColor(float value, const Eigen::Vector3f& normal) const;
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const = 0;
-    __host__ __device__ virtual OpticsData transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const = 0;
+    __host__ __device__ virtual OpticsData transfer(
+        const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num,
+        float ambient_magnitude, float specular_shininess, float dt) const = 0;
     __host__ __device__ virtual void setColormapType(tinycolormap::ColormapType type);
     __host__ __device__ virtual void setVisualizationTarget(VisualizationTarget vis_tgt);
 };
@@ -61,7 +63,9 @@ protected:
 public:
     __host__ __device__ IsosurfaceClassifier();
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const;
-    __host__ __device__ virtual OpticsData transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const;
+    __host__ __device__ virtual OpticsData transfer(
+        const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num,
+        float ambient_magnitude, float specular_shininess, float dt) const;
     __host__ __device__ virtual void setIsovalue(float v);
     __host__ __device__ virtual void setSigma(float v);
 };
@@ -76,5 +80,7 @@ class VolumeClassifier : public Classifier
 public:
     __host__ __device__ VolumeClassifier();
     __host__ __device__ virtual float transfer(const VolumeSampleData& v_data) const;
-    __host__ __device__ virtual OpticsData transfer(const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num, float dt) const;
+    __host__ __device__ virtual OpticsData transfer(
+        const VolumeSampleData& v_data, const Camera* cam, Light** lis, int lis_num,
+        float ambient_magnitude, float specular_shininess, float dt) const;
 };

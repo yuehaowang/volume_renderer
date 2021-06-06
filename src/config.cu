@@ -14,6 +14,8 @@ __global__ void initRenderingConfig(RenderingConfig* render_settings)
 
     render_settings->light_power = 1.0f;
     render_settings->light_rgb = Eigen::Vector3f(1, 1, 1);
+    render_settings->ambient_magnitude = 0.1f;
+    render_settings->specular_shininess = 16.0f;
 
     render_settings->sampling_step_len = 0.008;
 

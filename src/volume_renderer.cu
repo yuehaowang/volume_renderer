@@ -18,7 +18,7 @@ __device__ static void compositeFrontToBack(
 
 __global__ static void rayIntegral(
     Eigen::Vector3f* pixel_array, ImplicitGeometry** geom, Camera** cam,
-    Light** lis, int lis_num, Classifier** cls, float dt)
+    Light** lis, int lis_num, Classifier** cls, float ambient, float shininess, float dt)
 {
     int max_x = (*cam)->getFilm().resolution.x();
     int max_y = (*cam)->getFilm().resolution.y();
@@ -48,7 +48,7 @@ __global__ static void rayIntegral(
             VolumeSampleData pt_data = (*geom)->sample(p);
 
             /* Get optical data by transfer function */
-            OpticsData opt_d = (*cls)->transfer(pt_data, *cam, lis, lis_num, dt);
+            OpticsData opt_d = (*cls)->transfer(pt_data, *cam, lis, lis_num, ambient, shininess, dt);
 
             /* Front-to-back composition */
             compositeFrontToBack(color, alpha, opt_d.getColor(), opt_d.getOpacity());
@@ -104,12 +104,12 @@ void VolumeRenderer::setClassifier(Classifier** cls)
 
 }
 
-void VolumeRenderer::renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, int res_y, float dt)
+void VolumeRenderer::renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, int res_y, float ambient, float shininess, float dt)
 {
     int tx = CUDA_BLOCK_THREADS_X;
     int ty = CUDA_BLOCK_THREADS_Y;
     dim3 blocks(res_x / tx + 1, res_y / ty + 1);
     dim3 threads(tx, ty);
-    rayIntegral<<<blocks, threads>>>(pixel_array, geometry, main_camera, lights, count_lights, classifier, dt);
+    rayIntegral<<<blocks, threads>>>(pixel_array, geometry, main_camera, lights, count_lights, classifier, ambient, shininess, dt);
     checkCudaErrors(cudaDeviceSynchronize());
 }

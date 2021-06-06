@@ -28,5 +28,5 @@ public:
     void setLights(Light** lis, int lis_num);
     void setVolume(ImplicitGeometry** geom);
     void setClassifier(Classifier** cls);
-    void renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, int res_y, float dt);
+    void renderFrontToBack(Eigen::Vector3f* pixel_array, int res_x, int res_y, float ambient, float shininess, float dt);
 };
