@@ -98,6 +98,7 @@ protected:
 
 public:
     __host__ __device__ Volume(VolumeSampleData* grid_data, const Eigen::Vector3i& grid_dim, const Eigen::Vector3f& range);
+    __host__ __device__ ~Volume();
     __host__ __device__ virtual const VolumeSampleData& sample(const Eigen::Vector3f&);
     __host__ static bool readFromFile(const char* file_path, VolumeSampleData** vol_data, Eigen::Vector3i& grid_size, Eigen::Vector3f& bbox_size);
 };

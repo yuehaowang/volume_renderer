@@ -165,6 +165,11 @@ __host__ __device__ Volume::Volume(VolumeSampleData* d, const Eigen::Vector3i& g
     computeGradients();
 }
 
+__host__ __device__ Volume::~Volume()
+{
+    delete grid_data;
+}
+
 __host__ __device__ float Volume::centralDifference(Eigen::Vector3i coords, int axis_idx)
 {
     /* Handle boudary conditions. Set boundary's graident as its neighbours' gradient */
