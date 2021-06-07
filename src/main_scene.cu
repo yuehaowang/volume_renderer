@@ -253,7 +253,7 @@ void MainScene::closeScene()
     scene_opened = false;
 }
 
-void MainScene::openScene(const std::string& name)
+void MainScene::openScene(const std::string& name, bool builtin)
 {
     if (scene_opened)
     {
@@ -283,7 +283,16 @@ void MainScene::openScene(const std::string& name)
         VolumeSampleData* d_vol_data;
         Eigen::Vector3i grid_dim;
         Eigen::Vector3f range;
-        if (Volume::readFromFile((resource_manager.getResource(name)).c_str(), &d_vol_data, grid_dim, range))
+        std::string path;
+        if (builtin)
+        {
+            path = resource_manager.getResource(name);
+        }
+        else
+        {
+            path = name;
+        }
+        if (Volume::readFromFile(path.c_str(), &d_vol_data, grid_dim, range))
         {
             createVolume<<<1, 1>>>(d_geom, d_vol_data, grid_dim, range);
         }
@@ -314,7 +323,7 @@ void MainScene::processRenderingResult(unsigned char* bytes)
         printf("-- Saving the rendering result to %s...\n", result_save_path.c_str());
         if (stbi_write_png(result_save_path.c_str(), OUTPUT_RESOLUTION_X, OUTPUT_RESOLUTION_Y, 4, bytes, 0))
         {
-            printf("---- Successfully save the rendering result to %s\n", result_save_path.c_str());   
+            printf("---- Successfully saved the rendering result to %s\n", result_save_path.c_str());   
         }
         else
         {

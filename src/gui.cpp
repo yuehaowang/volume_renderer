@@ -57,6 +57,7 @@ void GUI::drawControls()
 
 void GUI::drawMenuBar()
 {
+    bool to_open_from_path_popup = false;
     bool to_open_about_popup = false;
     bool to_open_save_result_popup = false;
 
@@ -89,7 +90,12 @@ void GUI::drawMenuBar()
             {
                 scene->openScene(BUILTIN_GEOM_MR_BRAIN);
             }
-            
+            ImGui::Separator();
+            if (ImGui::MenuItem("From Path..."))
+            {
+                to_open_from_path_popup = true;
+            }
+                        
             ImGui::EndMenu();
         }
 
@@ -114,6 +120,35 @@ void GUI::drawMenuBar()
         }
 
         ImGui::EndMenuBar();
+    }
+
+
+    if (to_open_from_path_popup)
+    {
+        ImGui::OpenPopup("Open From Path");
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        to_open_from_path_popup = false;
+    }
+    if (ImGui::BeginPopupModal("Open From Path", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static char file_path[512] = "./volume_file.bin";
+        ImGui::Text("Please input the file path (supported format: *.bin)");
+        ImGui::InputText("Source", file_path, IM_ARRAYSIZE(file_path));
+        ImGui::Separator();
+
+        if (ImGui::Button("Open", ImVec2(120, 0)))
+        {
+            scene->openScene(std::string(file_path), false);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::EndPopup();
     }
 
     if (to_open_about_popup)
@@ -147,7 +182,7 @@ void GUI::drawMenuBar()
     {
         static char file_path[512] = "./output.png";
         ImGui::Text("Please input the path to saving the result");
-        ImGui::InputText("Saving Path", file_path, IM_ARRAYSIZE(file_path));
+        ImGui::InputText("Destination", file_path, IM_ARRAYSIZE(file_path));
         ImGui::Separator();
 
         if (ImGui::Button("Save", ImVec2(120, 0)))

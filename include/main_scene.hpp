@@ -27,7 +27,7 @@ struct MainScene
     MainScene();
     ~MainScene();
     void updateConfiguration(RenderingConfig* c);
-    void openScene(const std::string& name);
+    void openScene(const std::string& name, bool builtin = false);
     void closeScene();
     void saveRenderingResult(const std::string& save_path);
     void processRenderingResult(unsigned char* bytes);

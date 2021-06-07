@@ -1,12 +1,14 @@
 '''
 Generate binary volume data from slices (images)
 Data are downloaded from http://graphics.stanford.edu/data/voldata/
+Author: Yuehao Wang
 '''
 
 
 import os
 import sys
-from PIL import Image
+import imageio
+import numpy as np
 import array
 
 # Fixed the width of bounding box
@@ -19,8 +21,8 @@ def main():
 
     slices_files = sorted(os.listdir(in_data_path))
 
-    im = Image.open(os.path.join(in_data_path, slices_files[0]))
-    w, h = im.size
+    im = imageio.imread(os.path.join(in_data_path, slices_files[0]))
+    w, h = im.shape
 
     grid_dim = (w, h, len(slices_files))
     bbox_size = [
@@ -46,13 +48,9 @@ def main():
     f_data_list = [bbox_size[0], bbox_size[1], bbox_size[2]]
     for fn in slices_files:
         f_path = os.path.join(in_data_path, fn)
-        im = Image.open(f_path)
-
-        w, h = im.size
-
-        for i in range(w):
-            for j in range(h):
-                f_data_list.append(im.getpixel((i, j)) / 255.0)
+        im = imageio.imread(f_path).astype(np.float32) / 255
+        im = np.reshape(im, w * h)
+        f_data_list.extend(list(im))
 
     f_out_values.fromlist(f_data_list)
     f_out_values.tofile(out_f)
